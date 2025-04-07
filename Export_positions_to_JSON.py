@@ -1,14 +1,11 @@
 #!/usr/bin/env python
 #
-#
-# Allows export data to JSON file (press 'K') and controlling a vehicle with a keyboard. 
-#
-#
-
 """
-Welcome to CARLA manual control.
+Allows export data to JSON file (press 'K') and controlling a vehicle with a keyboard. 
 
-Use ARROWS or WASD keys for control.
+__author__ = "Yaroslav Budukh, Roman Budukh"
+
+Use WASD keys for control.
 
 W : throttle
 S : brake
