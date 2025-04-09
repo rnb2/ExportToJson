@@ -295,7 +295,7 @@ class World(object):
 # -- KeyboardControl -----------------------------------------------------------
 # ==============================================================================
 
-JSON_FILE_NAME = "vehicle_data5.json"
+JSON_FILE_NAME = "vehicle_data_v1.007.json"
 
 class KeyboardControl:
     
@@ -454,18 +454,58 @@ class KeyboardControl:
                 status = "BRAKING"
             # Можно добавить другие условия, например, для стоянки ("PARKED")
 
-        data = {
+        maneuver_type = None
+        turn_direction = None
+        intersection_data = None
+
+        turn_direction_r = {"direction": "RIGHT"}
+        turn_direction_l = {"direction": "LEFT"}
+        
+
+        # Очень простой способ определить поворот по углу поворота руля
+        if isinstance(control, carla.VehicleControl):
+            if abs(control.steer) > 0.5:  # Если угол поворота руля достаточно большой
+                maneuver_type = "TURN"
+                #print(str(abs(control.steer)))
+                if control.steer < -0.1:
+                    turn_direction = {"turnDirection": turn_direction_l}
+                    #print(turn_direction)
+                elif control.steer > 0.1:
+                    turn_direction = {"turnDirection": turn_direction_r}
+                    #print(turn_direction)
+
+                # В этом упрощенном примере мы используем текущие координаты как placeholder
+                # для точек перекрестка. В реальной ситуации вам нужно будет использовать
+                # информацию о waypoints или навигации для получения точных координат.
+                intersection_data = {
+                    "exitPoint": {
+                        "latitude": self._world.gnss_sensor.lat + random.uniform(-0.00005, 0.00005), # Небольшие случайные смещения для примера
+                        "longitude": self._world.gnss_sensor.lon + random.uniform(-0.00005, 0.00005)
+                    },
+                    "entrancePoint": {
+                        "latitude": self._world.gnss_sensor.lat + random.uniform(-0.00005, 0.00005),
+                        "longitude": self._world.gnss_sensor.lon + random.uniform(-0.00005, 0.00005)
+                    },
+                    "turnPoint": {
+                        "latitude": self._world.gnss_sensor.lat + random.uniform(-0.00005, 0.00005),
+                        "longitude": self._world.gnss_sensor.lon + random.uniform(-0.00005, 0.00005)
+                    }
+                }
+        offsetId = str(uuid.uuid4())
+        id_nav = str(uuid.uuid4())
+        id_guid = str(uuid.uuid4())
+        data_nav_position = {
             "timestamp": int(time.time() * 1e9), # Convert to nanoseconds for the example
             "signal_name": "NavPositionPositionsObjectListPage",
             "payload": {
                 "total": 1,
                 "totalPages": 1,
                 "offset": 0,
-                "offsetId": str(uuid.uuid4()),
+                "offsetId": offsetId,
                 "data": [
                     {
                         "name": "P[0]",
-                        "id": str(uuid.uuid4()),
+                        "id": id_nav,
                         "uri": "/NavPosition/positions/b0000000-0000-0000-0000-000000000000",
                         "coordinates": {
                             "latitude": self._world.gnss_sensor.lat,
@@ -477,13 +517,39 @@ class KeyboardControl:
                         },
                         "drivingSide": "LEFT", # Здесь можно добавить логику для определения стороны движения, если она будет найдена
                         "status": status,
-                        "speed": speed # Добавлен параметр speed
+                        "speed": speed
                     }
                 ]
             }
         }
 
-        self._logged_data.append(data)
+        data_nav_guidance = {
+            "timestamp": int(time.time() * 1e9),
+            "signal_name": "NavGuidanceManeuversObjectListPage",
+            "payload": {
+                "total": 1,
+                "totalPages": 1,
+                "offset": 0,
+                "offsetId": offsetId,
+                "data": [
+                    {
+                        "id": id_guid,
+                        "uri": f"/NavGuidance/maneuvers/{id_guid}",
+                        "name": "TurnOnUrbanRoad Maneuver (Non-Straight)",
+                        "maneuverType": maneuver_type,
+                        "turnDirection": turn_direction,
+                        "intersection": intersection_data,
+                        "coordinates": {
+                            "latitude": self._world.gnss_sensor.lat,
+                            "longitude": self._world.gnss_sensor.lon
+                        }
+                    }
+                ]
+            }
+        }
+
+        self._logged_data.append(data_nav_position)
+        self._logged_data.append(data_nav_guidance)
 
     @staticmethod
     def _is_quit_shortcut(key):
@@ -1167,8 +1233,8 @@ def main():
         metavar='PATTERN',
         #default='vehicle.*',
         #help='actor filter (default: "vehicle.*")')
-        default='model3',
-        help='actor filter (default: "model3")')
+        default='cybertruck',
+        help='actor filter (default: "cybertruck")')
     argparser.add_argument(
         '--generation',
         metavar='G',
