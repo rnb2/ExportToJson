@@ -295,7 +295,7 @@ class World(object):
 # -- KeyboardControl -----------------------------------------------------------
 # ==============================================================================
 
-JSON_FILE_NAME = "vehicle_data_v1.007.json"
+JSON_FILE_NAME = "vehicle_data_v1.009.json"
 
 class KeyboardControl:
     
@@ -468,10 +468,10 @@ class KeyboardControl:
                 maneuver_type = "TURN"
                 #print(str(abs(control.steer)))
                 if control.steer < -0.1:
-                    turn_direction = {"turnDirection": turn_direction_l}
+                    turn_direction = turn_direction_l
                     #print(turn_direction)
                 elif control.steer > 0.1:
-                    turn_direction = {"turnDirection": turn_direction_r}
+                    turn_direction = turn_direction_r
                     #print(turn_direction)
 
                 # В этом упрощенном примере мы используем текущие координаты как placeholder
@@ -494,6 +494,8 @@ class KeyboardControl:
         offsetId = str(uuid.uuid4())
         id_nav = str(uuid.uuid4())
         id_guid = str(uuid.uuid4())
+        maneuverIdentification = str(uuid.uuid4())
+
         data_nav_position = {
             "timestamp": int(time.time() * 1e9), # Convert to nanoseconds for the example
             "signal_name": "NavPositionPositionsObjectListPage",
@@ -523,9 +525,9 @@ class KeyboardControl:
             }
         }
 
-        data_nav_guidance = {
+        data_nav_guidance_list = {
             "timestamp": int(time.time() * 1e9),
-            "signal_name": "NavGuidanceManeuversObjectListPage",
+            "signal_name": "NavGuidanceActiveGuidancesObjectListPage",
             "payload": {
                 "total": 1,
                 "totalPages": 1,
@@ -536,19 +538,26 @@ class KeyboardControl:
                         "id": id_guid,
                         "uri": f"/NavGuidance/maneuvers/{id_guid}",
                         "name": "TurnOnUrbanRoad Maneuver (Non-Straight)",
-                        "maneuverType": maneuver_type,
-                        "turnDirection": turn_direction,
-                        "intersection": intersection_data,
-                        "coordinates": {
-                            "latitude": self._world.gnss_sensor.lat,
-                            "longitude": self._world.gnss_sensor.lon
-                        }
+                        "maneuverIdentification": str(maneuverIdentification)
                     }
                 ]
+            }    
+        }    
+
+        data_nav_guidance = {
+            "timestamp": int(time.time() * 1e9),
+            "signal_name": "NavGuidanceManeuversObject",
+            "payload": {
+                "id": maneuverIdentification,
+                "uri": f"/NavGuidance/maneuvers/{maneuverIdentification}",
+                "name": "TurnOnUrbanRoad Maneuver (Non-Straight)",
+                "maneuverType": maneuver_type,
+                "turnDirection": turn_direction
             }
         }
 
         self._logged_data.append(data_nav_position)
+        self._logged_data.append(data_nav_guidance_list)
         self._logged_data.append(data_nav_guidance)
 
     @staticmethod
